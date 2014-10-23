@@ -1,0 +1,13 @@
+aqclient
+
+modules.order
+Module.symvers
+
+.tmp_versions/ 
+
+*.o 
+*.ko 
+*.asm 
+*.swp
+*.mod.c 
+.aqmo.* 
