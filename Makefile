@@ -1,11 +1,11 @@
 KDIR :=/lib/modules/$(shell uname -r)/build
 PWD :=$(shell pwd)
 
-APPS := aqclient
+APPS := aqclient exhaust_memory
 
 all: aqmo_module $(APPS)
 
-EXTRA_CFLAGS += -O2
+EXTRA_CFLAGS += -O2 -g
 
 install: aqmo_module
 	./install_aqmo.sh
@@ -18,5 +18,5 @@ aqmo_module: aqmodule.c
 	objdump -d aqmo.ko > aqmo.asm
 
 clean:
-	rm -rf *.o .tmp_versions *.ko *.mod* *.asm .aqmo.* modules.* Module.*
+	rm -rf *.o .tmp_versions *.ko *.mod* *.asm .aqmo.* modules.* Module.* .*.o.cmd
 

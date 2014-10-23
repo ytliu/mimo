@@ -1,4 +1,5 @@
 #!/bin/bash
+make
 sudo rmmod aqmo
 sudo rm -rf /dev/aqmo
 

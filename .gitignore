@@ -1,4 +1,5 @@
 aqclient
+exhaust_memory
 
 modules.order
 Module.symvers

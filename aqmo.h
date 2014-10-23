@@ -3,6 +3,15 @@
 
 #define AQMO_IOC_MAGIC 14
 
-#define AQMO_IOCQUERY    _IOR(AQMO_IOC_MAGIC, 0, unsigned long)
+#define MAX_ADDR_SIZE 10
+
+struct aq_st {
+  unsigned long pid;
+  unsigned long count;
+  unsigned long *filled_count;
+  unsigned long *addr;
+};
+
+#define AQMO_IOCQUERY    _IOWR(AQMO_IOC_MAGIC, 0, struct aq_st)
 
 #endif
