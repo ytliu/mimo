@@ -1,3 +1,12 @@
+### Overview
+
+This module is used by user to invoking IOCTL to interact with kernel.
+
+Currently it support following IOCTLs:
+
+* Activity Query (MIMO\_IOCAQ): it is used to query inactive pages with specific `pid` and `count`. User-level example can be found in `run-aq.sh` and `aqclient.c`.
+
+
 ### AQ IOCTL Environment Setup
 
 ##### Change specific kernel function address
