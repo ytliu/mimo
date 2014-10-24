@@ -2,7 +2,7 @@
 
 ##### Change specific kernel function address
 
-in admodule.c, there're 5 kernel functions addresses need to be modified:
+in mimodule.c, there're 5 kernel functions addresses need to be modified:
 
 * my\_page\_lock\_anon\_vma\_read
 * my\_next\_zones\_zonelist
@@ -24,14 +24,14 @@ and replace their respective address.
 
 Just execute following command:
 
-    $ ./install_aqmo.sh
+    $ make install
 
 It will compile the module and other useful program, make a device node and install the module.
 
 ##### Run
 
-Run the query client program:
+Run the activity query client program:
 
-    $ ./run.sh 10
+    $ ./run_aq.sh 10
 
 `10` means the number of addresses you need to get.

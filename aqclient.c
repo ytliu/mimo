@@ -5,7 +5,7 @@
 #include <string.h>
 #include <linux/ioctl.h>
 
-#include "aqmo.h"
+#include "mimo.h"
 
 int main(int argc, char **argv) {
   int i, fd;
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   memset((void *) aqdata->filled_count, 0, sizeof(unsigned long));
   memset((void *) aqdata->addr, 0, sizeof(unsigned long) * aqdata->count);
 
-  if ((fd = open("/dev/aqmo", O_RDONLY)) < 0) {
+  if ((fd = open("/dev/mimo", O_RDONLY)) < 0) {
     perror("open");
     return -1;
   }
@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
   }
   printf("\n");
 
-  if ((ret = ioctl(fd, AQMO_IOCQUERY, aqdata)) < 0) {
+  if ((ret = ioctl(fd, MIMO_IOCAQ, aqdata)) < 0) {
     perror("ioctl_query");
   }
 

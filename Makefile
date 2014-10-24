@@ -3,20 +3,20 @@ PWD :=$(shell pwd)
 
 APPS := aqclient exhaust_memory
 
-all: aqmo_module $(APPS)
+all: mimo_module $(APPS)
 
 EXTRA_CFLAGS += -O2 -g
 
-install: aqmo_module
-	./install_aqmo.sh
+install: mimo_module
+	./install_mimo.sh
 
-obj-m += aqmo.o
-aqmo-objs := aqmodule.o
+obj-m += mimo.o
+mimo-objs := mimodule.o
 
-aqmo_module: aqmodule.c
+mimo_module: mimodule.c
 	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
-	objdump -d aqmo.ko > aqmo.asm
+	objdump -d mimo.ko > mimo.asm
 
 clean:
-	rm -rf *.o .tmp_versions *.ko *.mod* *.asm .aqmo.* modules.* Module.* .*.o.cmd
+	rm -rf *.o .tmp_versions *.ko *.mod* *.asm .mimo.* modules.* Module.* .*.o.cmd
 

@@ -1,8 +1,8 @@
 /*
- * Based on liangpig gamo 
- *
- * written by mctrain
- *
+ * My Ioctl Module (MIMO)
+ * used by user for invoking IOCTL to interact with kernel
+ * 
+ * Written by mctrain based on liangpig gamo 
  */
 
 
@@ -22,35 +22,35 @@
 #include <linux/hugetlb.h>
 #include <linux/delay.h>
 
-#include "aqmo.h"
+#include "mimo.h"
 
 MODULE_LICENSE("GPL");
 
-static int aqmo_init(void);
-static void aqmo_exit(void);
+static int mimo_init(void);
+static void mimo_exit(void);
 
-static int aqmo_dev_open(struct inode *, struct file *);
-static int aqmo_dev_release(struct inode *, struct file *);
-static ssize_t aqmo_dev_read(struct file *, char *, size_t, loff_t *);
-static ssize_t aqmo_dev_write(struct file *, const char *, size_t, loff_t *);
+static int mimo_dev_open(struct inode *, struct file *);
+static int mimo_dev_release(struct inode *, struct file *);
+static ssize_t mimo_dev_read(struct file *, char *, size_t, loff_t *);
+static ssize_t mimo_dev_write(struct file *, const char *, size_t, loff_t *);
 
-static long aqmo_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
+static long mimo_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 
-#define DEVICE_NAME "aqmodev"
+#define DEVICE_NAME "mimodev"
 
-static struct cdev *aqmo_cdev;
+static struct cdev *mimo_cdev;
 
-static int aqmo_devno;
+static int mimo_devno;
 
 static int device_open = 0;
 
-static struct file_operations aqmo_fops = {
+static struct file_operations mimo_fops = {
   .owner = THIS_MODULE,
-  .read = aqmo_dev_read,
-  .write = aqmo_dev_write,
-  .open = aqmo_dev_open,
-  .release = aqmo_dev_release,
-  .unlocked_ioctl = aqmo_ioctl,
+  .read = mimo_dev_read,
+  .write = mimo_dev_write,
+  .open = mimo_dev_open,
+  .release = mimo_dev_release,
+  .unlocked_ioctl = mimo_ioctl,
 };
 
 typedef struct anon_vma * (*plavr)(struct page *);
@@ -120,36 +120,36 @@ int write_console(char *str)
   return -1;
 }
 
-static int aqmo_init(void)
+static int mimo_init(void)
 {
   int ret;
 
-  if ((ret = alloc_chrdev_region(&aqmo_devno, 0, 1, DEVICE_NAME))) {
-    printk(KERN_ALERT "AQModulE: Failed allocating major: %d\n", ret);
+  if ((ret = alloc_chrdev_region(&mimo_devno, 0, 1, DEVICE_NAME))) {
+    printk(KERN_ALERT "MIModulE: Failed allocating major: %d\n", ret);
     return ret;
   }
-  printk(KERN_ALERT "AQModulE: Assigned with device major %d\n", MAJOR(aqmo_devno));
+  printk(KERN_ALERT "MIModulE: Assigned with device major %d\n", MAJOR(mimo_devno));
 
-  aqmo_cdev = cdev_alloc();
-  aqmo_cdev->ops = &aqmo_fops;
-  aqmo_cdev->owner = THIS_MODULE;
+  mimo_cdev = cdev_alloc();
+  mimo_cdev->ops = &mimo_fops;
+  mimo_cdev->owner = THIS_MODULE;
 
-  if ((ret = cdev_add(aqmo_cdev, aqmo_devno, 1))) {
-    printk(KERN_ALERT "AQModulE: Failed adding character device: %d\n", ret);
+  if ((ret = cdev_add(mimo_cdev, mimo_devno, 1))) {
+    printk(KERN_ALERT "MIModulE: Failed adding character device: %d\n", ret);
     return ret;
   }
 
-  printk(KERN_ALERT "AQModulE: Initialized\n");
+  printk(KERN_ALERT "MIModulE: Initialized\n");
   return 0;
 }
 
-static void aqmo_exit(void)
+static void mimo_exit(void)
 {
-  printk(KERN_ALERT "AQModulE: Waiting for the aqmod to exit.\n");
+  printk(KERN_ALERT "MIModulE: Waiting for the mimod to exit.\n");
 
-  cdev_del(aqmo_cdev);
-  unregister_chrdev_region(aqmo_devno, 1);
-  printk(KERN_ALERT "AQModulE: Exit\n");
+  cdev_del(mimo_cdev);
+  unregister_chrdev_region(mimo_devno, 1);
+  printk(KERN_ALERT "MIModulE: Exit\n");
 }
 
 /*
@@ -160,14 +160,14 @@ static void aqmo_exit(void)
  * Called when a process tries to open the device file, like
  * "cat /dev/mycharfile"
  */
-static int aqmo_dev_open(struct inode *inode, struct file *file)
+static int mimo_dev_open(struct inode *inode, struct file *file)
 {
   device_open++;
   try_module_get(THIS_MODULE);
   return 0;
 }
 
-static int aqmo_dev_release(struct inode *inode, struct file *file)
+static int mimo_dev_release(struct inode *inode, struct file *file)
 {
   device_open--;    /* We're now ready for our next caller */
 
@@ -181,18 +181,18 @@ static int aqmo_dev_release(struct inode *inode, struct file *file)
   return 0;
 }
 
-static ssize_t aqmo_dev_read(struct file *filp, /* see include/linux/fs.h */
+static ssize_t mimo_dev_read(struct file *filp, /* see include/linux/fs.h */
     char *buffer,  /* buffer to fill with data */
     size_t length, /* length of the buffer     */
     loff_t * offset)
 {
-  printk(KERN_ALERT "AQModulE: Read operation isn't supported.\n");
+  printk(KERN_ALERT "MIModulE: Read operation isn't supported.\n");
   return -EINVAL;
 }
 
-static ssize_t aqmo_dev_write(struct file *filp, const char *buff, size_t len, loff_t * off)
+static ssize_t mimo_dev_write(struct file *filp, const char *buff, size_t len, loff_t * off)
 {
-  printk(KERN_ALERT "AQModulE: Write operation isn't supported.\n");
+  printk(KERN_ALERT "MIModulE: Write operation isn't supported.\n");
   return -EINVAL;
 }
 
@@ -215,8 +215,6 @@ int get_inactivity_addr(struct aq_st * aqdata)
   pid = aqdata->pid;
   count = aqdata->count;
 
-  printk(KERN_ALERT "AQModulE-QUERY: get_inactivity_addr pid(%ld) count(%ld)\n", pid, count);
-  
   k_addr = (unsigned long *)kmalloc(sizeof(unsigned long) * count, GFP_KERNEL);
   memset(k_addr, 0, sizeof(unsigned long) * count);
 
@@ -237,7 +235,9 @@ int get_inactivity_addr(struct aq_st * aqdata)
     lruvec = &zone->lruvec;
     list = &lruvec->lists[LRU_INACTIVE_ANON];
     if (list_empty(list)) {
-      //printk(KERN_ALERT "empty list %p\n", list);
+#ifdef DEBUG
+      printk(KERN_ALERT "MIModulE-AQ: empty list %p\n", list);
+#endif
       continue;
     }
     first = list;
@@ -252,16 +252,18 @@ int get_inactivity_addr(struct aq_st * aqdata)
       if (!anon_vma || !mapcount)
         continue;
       
-      printk(KERN_ALERT "page %p anon_vma %p mapcount %d\n", page, anon_vma, mapcount);
-
       pgoff = page->index << (PAGE_CACHE_SHIFT - PAGE_SHIFT);
       my_anon_vma_interval_tree_foreach(avc, &anon_vma->rb_root, pgoff, pgoff) {
         struct vm_area_struct *vma = avc->vma;
-        printk(KERN_ALERT "[%ld] %d:%ld\n", scan, vma->vm_mm->owner->pid, pid);
+#ifdef DEBUG
+        printk(KERN_ALERT "MIModulE-AQ: [%ld] %d:%ld\n", scan, vma->vm_mm->owner->pid, pid);
+#endif
         if (vma->vm_mm->owner->pid == pid) {
           unsigned long address = my_vma_address(page, vma);
           k_addr[scan] = address;
-          printk(KERN_ALERT "[%ld] address %lx\n", scan, address);
+#ifdef DEBUG
+          printk(KERN_ALERT "MIModulE-AQ: [%ld] address %lx\n", scan, address);
+#endif
           scan++;
         }
       }
@@ -269,15 +271,17 @@ int get_inactivity_addr(struct aq_st * aqdata)
     spin_unlock_irq(&zone->lru_lock);
   }
 
-  printk(KERN_ALERT "AQModulE-QUERY: finish scan : %ld %p\n", scan, aqdata->filled_count);
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-QUERY: finish scan : %ld %p\n", scan, aqdata->filled_count);
+#endif
 
   if (copy_to_user(aqdata->filled_count, &scan, sizeof(unsigned long))) {
-    printk(KERN_ALERT "AQModulE: copy_to_user filled_count error\n");
+    printk(KERN_ALERT "MIModulE: copy_to_user filled_count error\n");
     return -EFAULT;
   }
   if (scan > 0) {
     if (copy_to_user(aqdata->addr, k_addr, sizeof(unsigned long) * scan)) {
-      printk(KERN_ALERT "AQModulE: copy_to_user addr error\n");
+      printk(KERN_ALERT "MIModulE: copy_to_user addr error\n");
       return -EFAULT;
     }
   }
@@ -286,34 +290,41 @@ int get_inactivity_addr(struct aq_st * aqdata)
 }
 
 static long
-aqmo_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+mimo_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-  printk(KERN_ALERT "AQModulE: IOCTL called by user.\n");
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE: IOCTL called by user.\n");
+#endif
   switch (cmd) {
-    case AQMO_IOCQUERY:
+    case MIMO_IOCAQ:
       {
         struct aq_st k_aqdata;
         
-        printk(KERN_ALERT "AQModulE: QUERY IOCTL.\n");
+#ifdef DEBUG
+        printk(KERN_ALERT "MIModulE: ACTIVITY QUERY IOCTL.\n");
+#endif
         
         if (copy_from_user(&k_aqdata, (struct aq_st *) arg, sizeof(struct aq_st))) {
-          printk(KERN_ALERT "AQModulE-QUERY: copy_from_user error\n");
+          printk(KERN_ALERT "MIModulE-AQ: copy_from_user error\n");
           return -EFAULT;
         }
-        printk(KERN_ALERT "AQModulE-QUERY: pid %ld count %ld addr %p\n", k_aqdata.pid, k_aqdata.count, k_aqdata.addr);
+
+#ifdef DEBUG
+        printk(KERN_ALERT "MIModulE-AQ: pid %ld count %ld addr %p\n", k_aqdata.pid, k_aqdata.count, k_aqdata.addr);
+#endif
 
         if (get_inactivity_addr(&k_aqdata)) {
-          printk(KERN_ALERT "AQModulE-QUERY: get_inactivity_addr failed\n");
+          printk(KERN_ALERT "MIModulE-AQ: get_inactivity_addr error\n");
           return -EFAULT;
         }
       }
       break;
     default:
-      printk(KERN_ALERT "AQModulE: IOCTL unknown operation\n");
+      printk(KERN_ALERT "MIModulE: IOCTL unknown operation\n");
       return -EINVAL;
   }
   return 0;
 }
 
-module_init(aqmo_init);
-module_exit(aqmo_exit);
+module_init(mimo_init);
+module_exit(mimo_exit);
