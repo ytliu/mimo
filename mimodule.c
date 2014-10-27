@@ -6,7 +6,10 @@
  */
 
 
-//#define DEBUG
+#define DEBUG
+#define VM_3_13_7
+//#define PC_3_13_7
+
 
 #include <linux/init.h>
 #include <linux/fs.h>
@@ -219,19 +222,28 @@ int get_inactivity_addr(struct aq_st * aqdata)
   memset(k_addr, 0, sizeof(unsigned long) * count);
 
   /* init non-exported kernel function pointer */
+#ifdef PC_3_13_7
   my_page_lock_anon_vma_read = (plavr)0xffffffff81158d20;
   my_next_zones_zonelist = (nzz)0xffffffff8113fcb0;
   my_anon_vma_interval_tree_iter_first = (avitif)0xffffffff81147770;
   my_size_to_hstate = (sth)0xffffffff81165ce0;
   my_anon_vma_interval_tree_iter_next = (avitin)0xffffffff811477a0;
+#endif
+#ifdef VM_3_13_7
+  my_page_lock_anon_vma_read = (plavr)0xffffffff8115e500;
+  my_next_zones_zonelist = (nzz)0xffffffff81144cd0;
+  my_anon_vma_interval_tree_iter_first = (avitif)0xffffffff8114c720;
+  my_size_to_hstate = (sth)0xffffffff8116b650;
+  my_anon_vma_interval_tree_iter_next = (avitin)0xffffffff8114c750;
+#endif
 
   zonelist = NODE_DATA(numa_node_id())->node_zonelists;
 
-  scan = 3;
+  scan = 0;
 
   my_for_each_zone_zonelist(zone, z, zonelist,
       gfp_zone(GFP_KERNEL)) {
-    spin_lock_irq(&zone->lru_lock);
+    //spin_lock_irq(&zone->lru_lock);
     lruvec = &zone->lruvec;
     list = &lruvec->lists[LRU_INACTIVE_ANON];
     if (list_empty(list)) {
@@ -268,7 +280,7 @@ int get_inactivity_addr(struct aq_st * aqdata)
         }
       }
     }
-    spin_unlock_irq(&zone->lru_lock);
+    //spin_unlock_irq(&zone->lru_lock);
   }
 
 #ifdef DEBUG

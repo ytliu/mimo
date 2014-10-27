@@ -18,5 +18,5 @@ mimo_module: mimodule.c
 	objdump -d mimo.ko > mimo.asm
 
 clean:
-	rm -rf *.o .tmp_versions *.ko *.mod* *.asm .mimo.* modules.* Module.* .*.o.cmd
+	rm -rf *.o .tmp_versions *.ko *.mod* *.asm .mimo.* modules.* Module.* .*.o.cmd $(APPS)
 
