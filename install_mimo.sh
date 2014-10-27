@@ -1,4 +1,5 @@
 #!/bin/bash
+make
 sudo rmmod mimo
 sudo rm -rf /dev/mimo
 

@@ -7,9 +7,9 @@
 
 
 #define DEBUG
-#define VM_3_13_7
-//#define PC_3_13_7
-
+//#define PC_3_13
+//#define VM_3_13
+#define VM_3_2
 
 #include <linux/init.h>
 #include <linux/fs.h>
@@ -56,7 +56,7 @@ static struct file_operations mimo_fops = {
   .unlocked_ioctl = mimo_ioctl,
 };
 
-typedef struct anon_vma * (*plavr)(struct page *);
+typedef struct anon_vma * (*plav)(struct page *);
 
 typedef struct zoneref * (*nzz)(struct zoneref *, enum zone_type,
 					nodemask_t *, struct zone **);
@@ -65,13 +65,10 @@ typedef struct anon_vma_chain * (*avitif)(struct rb_root *, unsigned long, unsig
 
 typedef struct hstate * (*sth)(unsigned long);
 
-typedef struct anon_vma_chain * (*avitin)(struct anon_vma_chain *, unsigned long, unsigned long);
-
-plavr my_page_lock_anon_vma_read;
+plav my_page_get_anon_vma;
 nzz my_next_zones_zonelist;
 avitif my_anon_vma_interval_tree_iter_first;
 sth my_size_to_hstate;
-avitin my_anon_vma_interval_tree_iter_next;
 
 static inline struct hstate *my_page_hstate(struct page *page)
 {
@@ -82,11 +79,15 @@ unsigned long
 my_vma_address(struct page *page, struct vm_area_struct *vma)
 {
   pgoff_t pgoff = page->index << (PAGE_CACHE_SHIFT - PAGE_SHIFT);
+  unsigned long address;
 
   if (unlikely(is_vm_hugetlb_page(vma)))
     pgoff = page->index << huge_page_order(my_page_hstate(page));
-
-  return vma->vm_start + ((pgoff - vma->vm_pgoff) << PAGE_SHIFT);
+  address = vma->vm_start + ((pgoff - vma->vm_pgoff) << PAGE_SHIFT);
+  if (unlikely(address < vma->vm_start || address >= vma->vm_end)) {
+    return -EFAULT;
+  }
+  return address;
 }
 
 static inline struct zoneref *my_first_zones_zonelist(struct zonelist *zonelist,
@@ -99,10 +100,6 @@ static inline struct zoneref *my_first_zones_zonelist(struct zonelist *zonelist,
 }
 
 #define my_lru_to_page(_head) (list_entry((_head)->prev, struct page, lru))
-
-#define my_anon_vma_interval_tree_foreach(avc, root, start, last)		 \
-	for (avc = my_anon_vma_interval_tree_iter_first(root, start, last); \
-	     avc; avc = my_anon_vma_interval_tree_iter_next(avc, start, last))
 
 #define my_for_each_zone_zonelist_nodemask(zone, z, zlist, highidx, nodemask) \
 	for (z = my_first_zones_zonelist(zlist, highidx, nodemask, &zone);	\
@@ -203,11 +200,9 @@ int get_inactivity_addr(struct aq_st * aqdata)
 {
   struct zoneref *z;
   struct zone *zone;
-  struct lruvec *lruvec;
   struct zonelist *zonelist;
   struct list_head *list, *first;
   struct anon_vma *anon_vma;
-  pgoff_t pgoff;
   struct anon_vma_chain *avc;
   unsigned long scan;
   unsigned int mapcount;
@@ -222,19 +217,24 @@ int get_inactivity_addr(struct aq_st * aqdata)
   memset(k_addr, 0, sizeof(unsigned long) * count);
 
   /* init non-exported kernel function pointer */
-#ifdef PC_3_13_7
+#ifdef PC_3_13
   my_page_lock_anon_vma_read = (plavr)0xffffffff81158d20;
   my_next_zones_zonelist = (nzz)0xffffffff8113fcb0;
   my_anon_vma_interval_tree_iter_first = (avitif)0xffffffff81147770;
   my_size_to_hstate = (sth)0xffffffff81165ce0;
   my_anon_vma_interval_tree_iter_next = (avitin)0xffffffff811477a0;
 #endif
-#ifdef VM_3_13_7
+#ifdef VM_3_13
   my_page_lock_anon_vma_read = (plavr)0xffffffff8115e500;
   my_next_zones_zonelist = (nzz)0xffffffff81144cd0;
   my_anon_vma_interval_tree_iter_first = (avitif)0xffffffff8114c720;
   my_size_to_hstate = (sth)0xffffffff8116b650;
   my_anon_vma_interval_tree_iter_next = (avitin)0xffffffff8114c750;
+#endif
+#ifdef VM_3_2
+  my_page_get_anon_vma = (plav)0xffffffff810d76d0;
+  my_next_zones_zonelist = (nzz)0xffffffff810c85f0;
+  my_size_to_hstate = (sth)0xffffffff810e109b;
 #endif
 
   zonelist = NODE_DATA(numa_node_id())->node_zonelists;
@@ -244,8 +244,7 @@ int get_inactivity_addr(struct aq_st * aqdata)
   my_for_each_zone_zonelist(zone, z, zonelist,
       gfp_zone(GFP_KERNEL)) {
     //spin_lock_irq(&zone->lru_lock);
-    lruvec = &zone->lruvec;
-    list = &lruvec->lists[LRU_INACTIVE_ANON];
+    list = (struct list_head *)&zone->lru[LRU_INACTIVE_ANON];
     if (list_empty(list)) {
 #ifdef DEBUG
       printk(KERN_ALERT "MIModulE-AQ: empty list %p\n", list);
@@ -259,13 +258,12 @@ int get_inactivity_addr(struct aq_st * aqdata)
       if (page == NULL) {
         continue;
       }
-      anon_vma = my_page_lock_anon_vma_read(page);
+      anon_vma = my_page_get_anon_vma(page);
       mapcount = page_mapcount(page);
       if (!anon_vma || !mapcount)
         continue;
       
-      pgoff = page->index << (PAGE_CACHE_SHIFT - PAGE_SHIFT);
-      my_anon_vma_interval_tree_foreach(avc, &anon_vma->rb_root, pgoff, pgoff) {
+      list_for_each_entry(avc, &anon_vma->head, same_anon_vma) {
         struct vm_area_struct *vma = avc->vma;
 #ifdef DEBUG
         printk(KERN_ALERT "MIModulE-AQ: [%ld] %d:%ld\n", scan, vma->vm_mm->owner->pid, pid);
