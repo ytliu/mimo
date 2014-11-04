@@ -7,7 +7,8 @@
 
 
 #define DEBUG
-#define VM_3_13_7
+#define VM_3_8_1
+//#define VM_3_13_7
 //#define PC_3_13_7
 
 
@@ -236,6 +237,14 @@ int get_inactivity_addr(struct aq_st * aqdata)
   my_size_to_hstate = (sth)0xffffffff8116b650;
   my_anon_vma_interval_tree_iter_next = (avitin)0xffffffff8114c750;
 #endif
+#ifdef VM_3_8_1
+  my_page_lock_anon_vma_read = (plavr)0xffffffff81128ac0;
+  my_next_zones_zonelist = (nzz)0xffffffff81110c60;
+  my_anon_vma_interval_tree_iter_first = (avitif)0xffffffff81118730;
+  my_size_to_hstate = (sth)0xffffffff81134ce0;
+  my_anon_vma_interval_tree_iter_next = (avitin)0xffffffff81118760;
+#endif
+
 
   zonelist = NODE_DATA(numa_node_id())->node_zonelists;
 
