@@ -1,4 +1,5 @@
 aqclient
+pmclient
 exhaust_memory
 
 modules.order
@@ -12,3 +13,6 @@ Module.symvers
 *.swp
 *.mod.c 
 .aqmo.* 
+*.mimo.*
+*.mimodule.*
+tags

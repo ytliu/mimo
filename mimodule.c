@@ -7,8 +7,8 @@
 
 
 #define DEBUG
-#define VM_3_8_1
-//#define VM_3_13_7
+//#define VM_3_8_1
+#define VM_3_13_7
 //#define PC_3_13_7
 
 
@@ -25,6 +25,9 @@
 #include <linux/pagemap.h>
 #include <linux/hugetlb.h>
 #include <linux/delay.h>
+
+#include <linux/sched.h>
+#include <asm/pgtable.h>
 
 #include "mimo.h"
 
@@ -310,6 +313,214 @@ int get_inactivity_addr(struct aq_st * aqdata)
   return 0;
 }
 
+unsigned long mimo_get_ent(struct mm_struct *mm, unsigned long addr)
+{
+  pgd_t *pgd;
+  pud_t *pud;
+  pmd_t *pmd;
+  pte_t *pte;
+
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: mimo_get_ent: %lx\n", addr);
+#endif
+
+  pgd = pgd_offset(mm, addr);
+  if (!pgd_present(*pgd)) {
+    printk(KERN_ALERT "MIModulE-PM: get_pte: pgd not exist\n");
+    return PM_READ_ERR;
+  }
+
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: pgd_value: %lx\n", pgd->pgd);
+#endif
+
+  pud = pud_offset(pgd, addr);
+  if (!pud_present(*pud)) {
+    printk(KERN_ALERT "MIModulE-PM: get_pte: pud not exist\n");
+    return PM_READ_ERR;
+  }
+
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: pud_value: %lx\n", pud->pud);
+#endif
+
+  if (unlikely(pud_large(*pud))) {
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: large pud\n");
+#endif
+    return pud->pud;
+  }
+
+  pmd = pmd_offset(pud, addr);
+  if (!pmd_present(*pmd)) {
+    printk(KERN_ALERT "MIModulE-PM: get_pte: pmd not exist\n");
+    return PM_READ_ERR;
+  }
+
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: pmd_value: %lx\n", pmd->pmd);
+#endif
+
+  if (unlikely(pmd_large(*pmd))) {
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: large pud\n");
+#endif
+    return pmd->pmd;
+  }
+
+  pte = pte_offset_kernel(pmd, addr);
+  if (!pte_present(*pte)) {
+    printk(KERN_ALERT "MIModulE-PM: get_pte: pte not exist\n");
+    return PM_READ_ERR;
+  }
+
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: pte_value: %lx\n", pte->pte);
+#endif
+
+  return pte->pte;
+}
+
+unsigned long mimo_set_ent(struct mm_struct *mm, unsigned long addr, unsigned long flag)
+{
+  pgd_t *pgd;
+  pud_t *pud;
+  pmd_t *pmd;
+  pte_t *pte;
+
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: mimo_set_ent: %lx\n", addr);
+#endif
+
+  pgd = pgd_offset(mm, addr);
+  if (!pgd_present(*pgd)) {
+    printk(KERN_ALERT "MIModulE-PM: get_pte: pgd not exist\n");
+    return PM_SET_ERR;
+  }
+
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: pgd_value: %lx\n", pgd->pgd);
+#endif
+
+  pud = pud_offset(pgd, addr);
+  if (!pud_present(*pud)) {
+    printk(KERN_ALERT "MIModulE-PM: get_pte: pud not exist\n");
+    return PM_SET_ERR;
+  }
+
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: pud_value: %lx\n", pud->pud);
+#endif
+
+  if (unlikely(pud_large(*pud))) {
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: large pud\n");
+#endif
+    if (flag == PM_SET_ACC_BIT) {
+      pud->pud = pud->pud | _PAGE_ACCESSED;
+    } else if (flag == PM_CLR_ACC_BIT) {
+      pud->pud = pud->pud & ~_PAGE_ACCESSED;
+    } else {
+      return PM_SET_ERR;
+    }
+    return flag;
+  }
+
+  pmd = pmd_offset(pud, addr);
+  if (!pmd_present(*pmd)) {
+    printk(KERN_ALERT "MIModulE-PM: get_pte: pmd not exist\n");
+    return PM_SET_ERR;
+  }
+
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: pmd_value: %lx\n", pmd->pmd);
+#endif
+
+  if (unlikely(pmd_large(*pmd))) {
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: large pud\n");
+#endif
+    if (flag == PM_SET_ACC_BIT) {
+      pmd->pmd = pmd->pmd | _PAGE_ACCESSED;
+    } else if (flag == PM_CLR_ACC_BIT) {
+      pmd->pmd = pmd->pmd & ~_PAGE_ACCESSED;
+    } else {
+      return PM_SET_ERR;
+    }
+    return flag;
+  }
+
+  pte = pte_offset_kernel(pmd, addr);
+  if (!pte_present(*pte)) {
+    printk(KERN_ALERT "MIModulE-PM: get_pte: pte not exist\n");
+    return PM_SET_ERR;
+  }
+
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: pte_value: %lx\n", pte->pte);
+#endif
+
+  if (flag == PM_SET_ACC_BIT) {
+    pte->pte = pte->pte | _PAGE_ACCESSED;
+  } else if (flag == PM_CLR_ACC_BIT) {
+    pte->pte = pte->pte & ~_PAGE_ACCESSED;
+  } else {
+    return PM_SET_ERR;
+  }
+  return flag;
+}
+int pte_read_write(struct pm_st * pmdata)
+{
+  unsigned long scan;
+  
+  unsigned long pid, count;
+  unsigned long *k_addr;
+  unsigned long *k_ent;
+  struct task_struct *task;
+
+  // get task according to pid, if pid is 0, the task is derived from current
+  pid = pmdata->pid;
+  if (pid == 0) {
+    task = current;
+  } else {
+    task = pid_task(find_vpid(pid), PIDTYPE_PID);
+  }
+
+  count = pmdata->count;
+
+  if (copy_from_user(&k_addr, (unsigned long *) pmdata->addr, count * sizeof(unsigned long))) {
+    printk(KERN_ALERT "MIModulE-PM: k_addr copy_from_user error\n");
+    return -EFAULT;
+  }
+
+  if (copy_from_user(&k_ent, (unsigned long *) pmdata->ent, count * sizeof(unsigned long))) {
+    printk(KERN_ALERT "MIModulE-PM: k_ent copy_from_user error\n");
+    return -EFAULT;
+  }
+
+  for (scan = 0; scan < count; scan++) {
+    unsigned long addr = k_addr[scan];
+    unsigned long ent = k_ent[scan];
+    if (ent == 0) {
+      k_ent[scan] = mimo_get_ent(task->mm, addr);
+    } else {
+      k_ent[scan] = mimo_set_ent(task->mm, addr, ent);
+    }
+  }
+
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: finish scan : %ld %p\n", scan, pmdata->ent);
+#endif
+
+  if (copy_to_user(pmdata->ent, k_ent, count * sizeof(long))) {
+    printk(KERN_ALERT "MIModulE: ent copy_to_user error\n");
+    return -EFAULT;
+  }
+  kfree(k_addr);
+  kfree(k_ent);
+  return 0;
+}
+
 static long
 mimo_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
@@ -336,6 +547,30 @@ mimo_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
         if (get_inactivity_addr(&k_aqdata)) {
           printk(KERN_ALERT "MIModulE-AQ: get_inactivity_addr error\n");
+          return -EFAULT;
+        }
+      }
+      break;
+    case MIMO_IOCPM:
+      {
+        struct pm_st k_pmdata;
+
+#ifdef DEBUG
+        printk(KERN_ALERT "MIModulE: PTE Manipulation IOCTL.\n");
+#endif
+
+        if (copy_from_user(&k_pmdata, (struct pm_st *) arg, sizeof(struct pm_st))) {
+          printk(KERN_ALERT "MIModulE-PM: copy_from_user error\n");
+          return -EFAULT;
+        }
+
+#ifdef DEBUG
+        printk(KERN_ALERT "MIModulE-PM: pid %ld count %ld addr %p ent %p\n", 
+            k_pmdata.pid, k_pmdata.count, k_pmdata.addr, k_pmdata.ent);
+#endif
+
+        if (pte_read_write(&k_pmdata)) {
+          printk(KERN_ALERT "MIModulE-PM: pte_read_write error\n");
           return -EFAULT;
         }
       }
