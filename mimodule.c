@@ -457,7 +457,7 @@ unsigned long mimo_set_ent(struct mm_struct *mm, unsigned long addr, unsigned lo
   }
 
 #ifdef DEBUG
-  printk(KERN_ALERT "MIModulE-PM: pte_value: %lx\n", pte->pte);
+  printk(KERN_ALERT "MIModulE-PM: pte_value: %lx access: %lx\n", pte->pte, _PAGE_ACCESSED);
 #endif
 
   if (flag == PM_SET_ACC_BIT) {
@@ -467,6 +467,11 @@ unsigned long mimo_set_ent(struct mm_struct *mm, unsigned long addr, unsigned lo
   } else {
     return PM_SET_ERR;
   }
+
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: pte_value: %lx\n", pte->pte);
+#endif
+
   return flag;
 }
 int pte_read_write(struct pm_st * pmdata)
@@ -488,12 +493,19 @@ int pte_read_write(struct pm_st * pmdata)
 
   count = pmdata->count;
 
-  if (copy_from_user(&k_addr, (unsigned long *) pmdata->addr, count * sizeof(unsigned long))) {
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-PM: pte_read_write: count %lx, pid %x\n", pmdata->count, task->pid);
+#endif
+
+  k_addr = (unsigned long *)kmalloc(sizeof(unsigned long) * count, GFP_KERNEL);
+  k_ent = (unsigned long *)kmalloc(sizeof(unsigned long) * count, GFP_KERNEL);
+
+  if (copy_from_user(k_addr, (unsigned long *) pmdata->addr, count * sizeof(unsigned long))) {
     printk(KERN_ALERT "MIModulE-PM: k_addr copy_from_user error\n");
     return -EFAULT;
   }
 
-  if (copy_from_user(&k_ent, (unsigned long *) pmdata->ent, count * sizeof(unsigned long))) {
+  if (copy_from_user(k_ent, (unsigned long *) pmdata->ent, count * sizeof(unsigned long))) {
     printk(KERN_ALERT "MIModulE-PM: k_ent copy_from_user error\n");
     return -EFAULT;
   }
@@ -504,7 +516,9 @@ int pte_read_write(struct pm_st * pmdata)
     if (ent == 0) {
       k_ent[scan] = mimo_get_ent(task->mm, addr);
     } else {
-      k_ent[scan] = mimo_set_ent(task->mm, addr, ent);
+      if ((k_ent[scan] = mimo_set_ent(task->mm, addr, ent)) == ent) {
+        k_ent[scan] = mimo_get_ent(task->mm, addr);
+      }
     }
   }
 
