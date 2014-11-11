@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
   struct pm_st *pmdata;
 
   if (argc < 2) {
-    printf("Usage: ./aqclient pid\n");
+    printf("Usage: ./pmclient pid\n");
     return -1;
   }
 

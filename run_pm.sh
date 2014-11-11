@@ -1,3 +1,3 @@
 #!/bin/bash
 
-./pmclient 0
+./pmclient $1
