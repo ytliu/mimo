@@ -6,6 +6,7 @@ Currently it support following IOCTLs:
 
 * Activity Query (MIMO\_IOCAQ): it is used to query inactive pages with specific `pid` and `count`. User-level example can be found in `run-aq.sh` and `aqclient.c`.
 * PTE Manipulation (MIMO\_IOCPM): it is used to read PTE and set|clear access bit in PTE with specific `addr` and `ent`. User-level example can be found in `run-pm.sh` and `pmclient.c`.
+* Information Query (MIMO\_IOCIQ): it is used to query some system information, especially read from specific MSR. Parameter is the No. for specific information. User-level example can be found in `run-iq.sh` and `iqclient.c`.
 
 
 ### AQ IOCTL Environment Setup
@@ -62,11 +63,31 @@ It will compile the module and other useful program, make a device node and inst
 
 Initialize the `addr` and `ent` in `pmclient.c` file.
 
-After that, run the activity query client program:
+After that, run the PTE manipulation client program:
 
     $ ./run_pm.sh [pid] 
 
 if `pid` is 0, then the module just take the current process.
+
+------
+
+### IQ IOCTL Environment Setup
+
+##### Compile and install module
+
+Just execute following command:
+
+    $ ./install_mimo.sh
+
+It will compile the module and other useful program, make a device node and install the module.
+
+##### Run
+
+After that, run the information query client program:
+
+    $ ./run_iq.sh [type] [arg] 
+
+`type` is the type of specific information, `arg` is the specific parameter for each type of information. You can find the definition in `mimo.h`.
 
 ------
 

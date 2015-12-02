@@ -535,6 +535,48 @@ int pte_read_write(struct pm_st * pmdata)
   return 0;
 }
 
+int info_query(struct iq_st * iqdata)
+{
+  unsigned int type;
+  unsigned long msrl, msrh;
+  unsigned long *k_in; 
+  unsigned long *k_out; 
+
+  type = iqdata->type;
+  
+#ifdef DEBUG
+  printk(KERN_ALERT "MIModulE-IQ: info_query: type %x\n", type);
+#endif
+
+  switch (type) {
+    case IQ_INFO_RDMSR:
+      k_in = (unsigned long *)kmalloc(sizeof(unsigned long), GFP_KERNEL);
+      k_out = (unsigned long *)kmalloc(sizeof(unsigned long), GFP_KERNEL);
+      if (copy_from_user(k_in, (unsigned long *) iqdata->in, sizeof(unsigned long))) {
+        printk(KERN_ALERT "MIModulE-IQ: k_in copy_from_user error\n");
+        return -EFAULT;
+      }
+#ifdef DEBUG
+      printk(KERN_ALERT "MIModulE-IQ: info_query: msr %lx\n", *k_in);
+#endif
+      asm volatile ("rdmsr" : "=a"(msrl), "=d"(msrh) : "c"(*k_in));
+      *k_out = (unsigned long) ((msrh << 32) | msrl);
+#ifdef DEBUG
+      printk(KERN_ALERT "MIModulE-IQ: info_query: k_out %lx\n", *k_out);
+#endif
+      if (copy_to_user(iqdata->out, k_out, sizeof(unsigned long))) {
+        printk(KERN_ALERT "MIModulE: out copy_to_user error\n");
+        return -EFAULT;
+      }
+      kfree(k_in);
+      kfree(k_out);
+
+    default:
+      break;
+  }
+
+  return 0;
+}
 static long
 mimo_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
@@ -589,6 +631,30 @@ mimo_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
         }
       }
       break;
+    case MIMO_IOCIQ:
+      {
+        struct iq_st k_iqdata;
+
+#ifdef DEBUG
+        printk(KERN_ALERT "MIModulE: Information Query IOCTL.\n");
+#endif
+
+        if (copy_from_user(&k_iqdata, (struct iq_st *) arg, sizeof(struct iq_st))) {
+          printk(KERN_ALERT "MIModulE-IQ: copy_from_user error\n");
+          return -EFAULT;
+        }
+
+#ifdef DEBUG
+        printk(KERN_ALERT "MIModulE-IQ: type %x\n", k_iqdata.type);
+#endif
+
+        if (info_query(&k_iqdata)) {
+          printk(KERN_ALERT "MIModulE-IQ: info_query error\n");
+          return -EFAULT;
+        }
+      }
+      break;
+
     default:
       printk(KERN_ALERT "MIModulE: IOCTL unknown operation\n");
       return -EINVAL;

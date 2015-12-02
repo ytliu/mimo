@@ -1,7 +1,7 @@
 KDIR :=/lib/modules/$(shell uname -r)/build
 PWD :=$(shell pwd)
 
-APPS := aqclient exhaust_memory pmclient
+APPS := aqclient exhaust_memory pmclient iqclient
 
 all: mimo_module $(APPS)
 
